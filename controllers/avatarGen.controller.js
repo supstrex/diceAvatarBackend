@@ -1,4 +1,5 @@
 import { Configuration, OpenAIApi } from "openai";
+import { v4 } from 'uuid';
 
 const configuration = new Configuration({
   apiKey: process.env.OPENAI_API_KEY,
@@ -6,7 +7,6 @@ const configuration = new Configuration({
 const openai = new OpenAIApi(configuration);
 
 export async function generate(req, res) {
-
   if (!configuration.apiKey) {
     res.status(500).send({
       error: {
@@ -16,14 +16,16 @@ export async function generate(req, res) {
     return;
   }
 
-  const gender = req.body.gender || '';
-  const style = req.body.style || '';
-  const hd = req.body.hd || '';
-  const hair = req.body.hair || '';
+  const gender = req.body.gender || "";
+  const style = req.body.style || "";
+  const hd = req.body.hd || "";
+  const hair = req.body.hair || "";
 
-  const prompt = `avatar for a ${gender} in ${style} ${hd} style  ${hair ? "with" + hair + "hair": ''}`
+  const prompt = `avatar for a ${gender} in ${style} ${hd} style  ${
+    hair ? "with" + hair + "hair" : ""
+  }`;
 
-  if (gender.trim().length === 0 || style.trim().length === 0 ) {
+  if (gender.trim().length === 0 || style.trim().length === 0) {
     res.status(400).send({
       error: {
         message: "Please enter a valid description for your avatar",
@@ -37,10 +39,17 @@ export async function generate(req, res) {
       prompt,
       n: 4,
       size: "512x512",
+      response_format: "b64_json",
     });
     console.log(response.data);
-    const image_urls = response.data.data;
-    res.status(200).send(image_urls);
+    const b64_jsons = response.data.data;
+    const images = b64_jsons.map((image)=>{
+      return {
+        id: v4(),
+        imageUrl: "data:image/png;base64,"+image.b64_json
+      };
+    })
+    res.status(200).send(images);
   } catch (error) {
     if (error.response) {
       console.error(error.response.status, error.response.data);
